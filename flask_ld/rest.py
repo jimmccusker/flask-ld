@@ -54,6 +54,15 @@ def serializer(mimetype):
         return resp
     return wrapper
 
+class JsonLDSerializer(sadi.DefaultSerializer):
+    context = None
+    def serialize(self,graph):
+        if context != None:
+            self.bindPrefixes(graph)
+            return graph.serialize(format=self.outputFormat,
+                                   context= self.context,encoding='utf-8')
+
+
 sadi.contentTypes['application/json'] = sadi.DefaultSerializer("json-ld")
 class LinkedDataApi(Api):
 
