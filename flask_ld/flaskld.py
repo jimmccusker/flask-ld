@@ -60,10 +60,12 @@ def sparql_select(fn):
         if 'offset' in request.args:
             query += '\nOFFSET %s' % int(request.args['offset'])
 
+        contentType = request.headers['Accept']
+            sadi.deserialize(inputGraph,request.data,contentType)
         print g
         if 'user_id' in session:
             bindings['user'] = URIRef(session['user_id'])
-        return db.query(query, initBindings=bindings).serialize(format="json")
+        return sadi.serialize(db.query(query, initBindings=bindings),contentType)
     wrapper.__name__ = fn.__name__
     return wrapper
 
