@@ -57,7 +57,7 @@ def serializer(mimetype):
 class JsonLDSerializer(sadi.DefaultSerializer):
     context = None
     def serialize(self,graph):
-        if context != None:
+        if self.context != None:
             self.bindPrefixes(graph)
             return graph.serialize(format=self.outputFormat,
                                    context= self.context,encoding='utf-8')
