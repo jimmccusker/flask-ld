@@ -63,7 +63,7 @@ class JsonLDSerializer(sadi.DefaultSerializer):
                                    context= self.context,encoding='utf-8')
 
 
-sadi.contentTypes['application/json'] = sadi.DefaultSerializer("json-ld")
+sadi.contentTypes['application/json'] = sadi.JsonLDSerializer("json-ld")
 class LinkedDataApi(Api):
 
     _local_resources = {}
