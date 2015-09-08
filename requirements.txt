@@ -1,8 +1,8 @@
 Flask
 Flask-RESTful
 Jinja2
-RDFAlchemy
+rdflib
+-e svn+http://www.openvest.com/svn/public/rdfalchemy/trunk#egg=RDFAlchemy
 WebOb
--e git+https://github.com/jimmccusker/rdflib.git#egg=rdflib-master
 sadi
--e git+https://github.com/RDFLib/rdflib-jsonld.git#egg=rdflib-jsonld-master
+rdflib-jsonld

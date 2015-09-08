@@ -12,8 +12,7 @@ def create_sparql_store(endpoint, update_endpoint=None, use_let_syntax=False):
     if update_endpoint == None:
         update_endpoint = endpoint
     store = SPARQLUpdateStore(queryEndpoint=endpoint,
-                              update_endpoint=update_endpoint,
-                              use_let_syntax=use_let_syntax)
+                              update_endpoint=update_endpoint)
     store.open((endpoint,update_endpoint))
     return store
 
@@ -101,7 +100,7 @@ class LocalResource:
 
         o = Graph()
         o.add((URIRef(inputUri),OWL.sameAs,uri))
-        return o        
+        return o
 
     def read(self, uri):
         outputGraph = Graph()
