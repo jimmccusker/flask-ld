@@ -25,7 +25,11 @@ testpkgs=['flask-webtest',
                ]
 
 install_requires=[
-    "rdfalchemy",
+    "Jinja2",
+    "rdflib",
+    "WebOb",
+    "sadi",
+    "rdflib-jsonld",
     "Flask",
     "flask-security",
     'Flask-RESTful',

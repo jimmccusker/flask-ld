@@ -1,6 +1,4 @@
 from flask.ext.security.datastore import Datastore, UserDatastore
-import rdfalchemy
-from rdfalchemy.descriptors import value2object
 from rdflib import *
 from flask import make_response
 import uuid
@@ -9,18 +7,10 @@ from flask.ext import restful
 from flaskld.utils import lru
 import hashlib
 
-def public(obj):
-    return obj.lod_graph, obj.lod_graph
-
-def protected(obj):
-    return obj.ld_graph, obj.ld_graph or obj.lod_graph
-
-def private(obj):
-    return obj.private_graph, obj.private_graph or obj.ld_graph or obj.lod_graph
-
 void = Namespace("http://rdfs.org/ns/void#")
 auth = Namespace("http://vocab.rpi.edu/auth/")
 foaf = Namespace("http://xmlns.com/foaf/0.1/")
+prov  = Namespace("http://www.w3.org/ns/prov#")
 
 def load_namespaces(g, l):
     loc = {}
@@ -30,37 +20,6 @@ def load_namespaces(g, l):
         if isinstance(loc[local],Namespace):
             g.bind(local, loc[local])
 
-class Serializer:
-    def __init__(self,format):
-        self.format = format
-    def __call__(self, graph, code, headers=None):
-        resp = make_response(graph.serialize(format=self.format),code)
-        resp.headers.extend(headers or {})
-        return resp
-
-def JsonldSerializer(graph, code, headers=None):
-    context = dict([(x[0],str(x[1])) for x in graph.namespace_manager.namespaces()])
-    resp = make_response(graph.serialize(format='json-ld', context=context, indent=4).decode(),code)
-    resp.headers.extend(headers or {})
-    return resp    
-
-class Api(restful.Api):
-    def __init__(self, *args, **kwargs):
-        super(Api, self).__init__(*args, **kwargs)
-        self.representations = {
-            'application/xml': Serializer("xml"),
-            "application/rdf+xml":Serializer('xml'),
-            "text/rdf":Serializer('xml'),
-            'application/x-www-form-urlencoded':Serializer('xml'),
-            'text/turtle':Serializer('turtle'),
-            'application/x-turtle':Serializer('turtle'),
-            'text/html':Serializer('json-ld'),
-            'text/plain':Serializer('nt'),
-            'text/n3':Serializer('n3'),
-#            'text/html': output_html,
-            'application/json': JsonldSerializer,
-        }
-
 def tag_datastore(fn):
     def f(self,*args,**kw):
         result = fn(self,*args,**kw)
@@ -69,46 +28,164 @@ def tag_datastore(fn):
         return result
     return f
 
-class RDFAlchemyDatastore(Datastore):
 
-    def __init__(self, db, classes):
-        Datastore.__init__(self, db)
-        db.datastore = self
-        self.classes = classes
+# Borrowed and adapted from RDFAlchemy. This is the best bit.
+
+def value2object(value):
+    """suitable for a triple takes a value and returns a Literal, URIRef or BNode
+    suitable for a triple"""
+    if isinstance(value, Resource):
+        return value.identifier
+    elif isinstance(value, Identifier):
+        return value
+    else:
+        return Literal(value)
+    
+class rdfAbstract(object):
+    """Abstract base class for descriptors
+    Descriptors are to map class instance variables to predicates
+    optional cacheName is where to store items
+    range_type is the rdf:type of the range of this predicate"""
+    def __init__(self, pred, cacheName=None, range_type=None):
+        self.pred = pred
+        self.name = cacheName or pred
+        self.range_type = range_type
+
+    def __delete__(self, obj):
+        """deletes or removes from the database triples with:
+          obj.resUri as subject and self.pred as predicate
+          if the object of that triple is a Literal that stop
+          if the object of that triple is a BNode
+          then cascade the delete if that BNode has no further references to it
+          i.e. it is not the object in any other triples.
+        """
+        # be done ala getList above
+        log.debug("DELETE with descriptor for %s on %s", self.pred, obj.n3())
+        # first drop the cached value
+        if obj.__dict__.has_key(self.name):
+            del obj.__dict__[self.name]
+        # next, drop the triples
+        obj.remove(self.pred)
+
+
+
+
+class rdfSingle(rdfAbstract):
+    '''This is a Descriptor
+    Takes a the URI of the predicate at initialization
+    Expects to return a single item
+    on Assignment will set that value to the
+    ONLY triple with that subject,predicate pair'''
+    def __init__(self, pred, cacheName=None, range_type=None):
+        super(rdfSingle, self).__init__(pred, cacheName, range_type)
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self
+        if self.name in obj.__dict__:
+            return obj.__dict__[self.name]
+        log.debug("Geting with descriptor %s for %s", self.pred, obj.n3())
+        val = obj.value(__getitem__(self.pred)
+        obj.__dict__[self.name]= val
+        return val
+
+    def __set__(self, obj, value):
+        if isinstance(value,(list,tuple,set)):
+            raise AttributeError("to set an rdfSingle you must pass in a single value")
+        obj.__dict__[self.name] = value
+        o = value2object(value)
+        obj.set(self.pred, o)
+
+
+class rdfMultiple(rdfAbstract):
+    '''This is a Descriptor
+       Expects to return a list of values (could be a list of one)'''
+    def __init__(self, pred, cacheName=None, range_type=None):
+        super(rdfMultiple, self).__init__(pred, cacheName, range_type)
+
+    def __get__(self, obj, cls):
+        if obj is None:
+            return self
+        if self.name in obj.__dict__:
+            return obj.__dict__[self.name]
+        val = list(obj.objects(self.pred))
+        log.debug("Geting with descriptor %s for %s", self.pred, obj.n3())
+        # check to see if this is a Container or Collection
+        # if so, return collection as a list
+        if len(val) == 1 \
+           and (obj.graph.value(o, RDF.first) or obj.graph.value(o, RDF._1)):
+            val = collection.Collection(obj, self.pred)
+        val = [(isinstance(v, (BNode,URIRef)) and self.range_class(v) or v.toPython()) for v in val]
+        obj.__dict__[self.name] = val
+        return val
+
+    def __set__(self, obj, newvals):
+        log.debug("SET with descriptor value %s of type %s", newvals, type(newvals))
+        if not isinstance(newvals, (list, tuple)):
+            raise AttributeError("to set a rdfMultiple you must pass in a list (it can be a list of one)")
+        try:
+            oldvals = obj.__dict__[self.name]
+        except KeyError:
+            oldvals = []
+            obj.__dict__[self.name] = oldvals
+        for value in oldvals:
+            if value not in newvals:
+                obj.db.remove((obj.resUri, self.pred, value2object(value)))
+                log.debug("removing: %s, %s, %s", obj.n3(), self.pred, value)
+        for value in newvals:
+            if value not in oldvals:
+                obj.db.add((obj.resUri, self.pred, value2object(value)))
+                log.debug("adding: %s, %s, %s", obj.n3(), self.pred, value)
+        obj.__dict__[self.name] = copy(newvals)
+
+
+class Role(Resource, RoleMixin):
+    rdf_type = prov.Role
+    name = rdfSingle(rdfalchemy.RDFS.label)
+    identifier = rdfSingle(dc.identifier)
+    description = rdfSingle(dc.description)
+
+class User(Resource, UserMixin):
+    rdf_type = prov.Agent
+    name = rdfSingle(foaf.name)
+    email = rdfSingle(auth.email)
+    identifier = rdfSingle(dc.identifier)
+    password = rdfSingle(auth.passwd)
+    active = rdfSingle(auth.active)
+    confirmed_at = rdfSingle(auth.confirmed, range_type=xsd.datetime)
+    roles = rdfMultiple(auth.hasRole, range_type=prov.Role)
+    last_login_at = rdfSingle(auth.hadLastLogin, range_type=xsd.datetime)
+    current_login_at = rdfSingle(auth.hadCurrentLogin, range_type=xsd.datetime)
+
+    def __init__(self,resUri=None, **kwargs):
+        self.datastore = user_datastore
+        if resUri == None and 'identifier' not in kwargs:
+            kwargs['identifier'] = str(uuid4())
+
+        Resource.__init__(self, resUri, **kwargs)
+        print "LOD Graph:", type(self.lod_dataset)
+        if resUri == None and self.lod_dataset.primary_topic == None:
+            self.lod_dataset.primary_topic = self
+        if resUri == None and self.signature_request_service == None:
+            self.signature_request_service = URIRef(app.config['lod_prefix']+"request")
+
+        print self, resUri, kwargs
+
+class LinkedDatastore(Datastore):
+
+    def __init__(self, ldapi):
+        Datastore.__init__(self, ldapi.store)
+        self.ldapi = ldapi
 
     def commit(self):
-        self.db.store.commit()
+        self.ldapi.store.commit()
 
-    def put(self, model):
-        #self.db.add(model)
-        if model.resUri == URIRef("#"):
-            print model.db
-            g = model.local_api.create(model.db)
-            newURI = g.value(URIRef("#"),OWL.sameAs)
-            model = model.local_api.alchemy(newURI)
-        else:
-            model.local_api.update(model.db, model.resUri)
-        return model
-
-    def delete(self, model):
-        model.local_api.delete(model)
-
-    @lru
-    @tag_datastore
-    def get(self,resUri):
-        for t in self.db.objects(resUri,rdfalchemy.RDF.type):
-            if str(t) in self.classes:
-                result = self.classes[str(t)](resUri)
-                result.datasource = self
-                return result
-        return None
-
-class RDFAlchemyUserDatastore(RDFAlchemyDatastore, UserDatastore):
-    """A SQLAlchemy datastore implementation for Flask-Security that assumes the
+class LinkedUserDatastore(LinkedDatastore, UserDatastore):
+    """An Flask-LD datastore implementation for Flask-Security that assumes the
     use of the Flask-SQLAlchemy extension.
     """
     def __init__(self, db, classes, user_model, role_model):
-        RDFAlchemyDatastore.__init__(self, db, classes)
+        LinkedDatastore.__init__(self, db, classes)
         UserDatastore.__init__(self, user_model, role_model)
 
     @lru

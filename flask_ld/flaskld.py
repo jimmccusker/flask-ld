@@ -67,7 +67,6 @@ def sparql_select(fn):
     wrapper.__name__ = fn.__name__
     return wrapper
 
-
 class LocalResource:
     def __init__(self,cl, store, prefix):
         self.store = store
