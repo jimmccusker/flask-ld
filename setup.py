@@ -33,6 +33,7 @@ install_requires=[
     "Flask",
     "flask-security",
     'Flask-RESTful',
+    'RDFAlchemy'
     ]
 
 setup(
