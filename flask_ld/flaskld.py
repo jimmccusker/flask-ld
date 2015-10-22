@@ -67,6 +67,17 @@ def sparql_select(fn):
     wrapper.__name__ = fn.__name__
     return wrapper
 
+def rebase(triples, inputUri, uri):
+    def replace(x):
+        if isinstance(x,URIRef):
+            if x == inputUri:
+                return URIRef(uri)
+            elif x.startswith(inputUri):
+                return URIRef(uri + x)
+        return x
+    for t in triples:
+        yield (replace(t[0]),replace(t[1]),replace(t[2]))
+
 class LocalResource:
     def __init__(self,cl, store, prefix):
         self.store = store
@@ -80,19 +91,9 @@ class LocalResource:
     def create(self, graph):
         uri = self.create_uri()
         inputUri = "#"
-        def rebase(triples):
-            def replace(x):
-                if isinstance(x,URIRef):
-                    if x == inputUri:
-                        return URIRef(uri)
-                    elif x.startswith(inputUri):
-                        return URIRef(uri + x)
-                return x
-            for t in triples:
-                yield (replace(t[0]),replace(t[1]),replace(t[2]))
         g = Graph(self.store,URIRef(uri))
         g.remove((None,None,None))
-        g += rebase(graph)
+        g += rebase(graph, uri, inputUri)
         g.add((URIRef(uri),RDF.type,self.cl))
         g.add((URIRef(uri), dc.created, Literal(datetime.datetime.now())))
         g.commit()
