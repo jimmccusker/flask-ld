@@ -117,11 +117,12 @@ class LocalResource:
         return g
 
     def delete(self, uri):
-        globalgraph = ConjunctiveGraph(self.store)
+        globalGraph = ConjunctiveGraph(self.store)
         globalGraph.remove((uri,None,None))
-        g = Graph(store, uri)
+        g = Graph(self.store, uri)
         g.remove((None,None,None))
         g.commit()
+        return Graph()
 
     def count(self):
         g = ConjunctiveGraph(self.store)

@@ -25,32 +25,37 @@ class LinkedDataResource(Resource):
     def _get_uri(self,ident):
         return URIRef(self.local_resource.prefix + ident)
 
-    def get(self,ident):
-        uri = self._get_uri(ident)
+    def get(self,*args,**kwargs):
+        uri = self._get_uri(*args,**kwargs)
         result = self.local_resource.read(uri)
         return result
 
-    def delete(self,ident):
-        uri = self._get_uri(ident)
+    def delete(self,*args,**kwargs):
+        uri = self._get_uri(*args,**kwargs)
         self.local_resource.delete(uri)
-        return '', 204
+        return None, 204
 
-    def put(self,ident):
-        uri = self._get_uri(ident)
+    def put(self,*args,**kwargs):
+        uri = self._get_uri(*args,**kwargs)
         inputGraph = Graph()
         contentType = request.headers['Content-Type']
         sadi.deserialize(inputGraph,request.data,contentType)
-        self.local_resource.update(inputGraph, uri)
-        return '', 201
+        result = self.local_resource.update(inputGraph, uri)
+        return result, 201
 
-    def post(self,ident):
+    def post(self,*args,**kwargs):
         return '', 404
 
 def serializer(mimetype):
     def wrapper(graph, code, headers=None):
-        data = sadi.serialize(graph,mimetype)
+        data = ''
+        print graph
+        if graph is not None and hasattr(graph, "serialize"):
+            data = graph.serialize(format=sadi.contentTypes[mimetype].outputFormat)
+        print data, code, len(graph), mimetype
         resp = make_response(data, code)
         resp.headers.extend(headers or {})
+        print data
         return resp
     return wrapper
 
@@ -64,6 +69,7 @@ class JsonLDSerializer(sadi.DefaultSerializer):
 
 
 sadi.contentTypes['application/json'] = JsonLDSerializer("json-ld")
+sadi.contentTypes['application/ld+json'] = JsonLDSerializer("json-ld")
 class LinkedDataApi(Api):
 
     _local_resources = {}
@@ -72,7 +78,9 @@ class LinkedDataApi(Api):
         Api.__init__(self, app, prefix=api_prefix)
         self.store = store
         for mimetype in sadi.contentTypes.keys():
-            self.representations[mimetype] = serializer(mimetype)
+            if mimetype is not None:
+                self.representations[mimetype] = serializer(mimetype)
+
         self.lod_prefix = host_prefix + api_prefix
         self._decorators = decorators
 
