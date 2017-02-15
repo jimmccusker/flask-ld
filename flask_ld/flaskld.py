@@ -5,13 +5,13 @@ import random
 from datetime import datetime
 import re
 from flask import Flask, request, make_response, render_template, g, session, abort
-from flask.ext.admin import BaseView, expose
+from flask_admin import BaseView, expose
 from flask_admin.actions import ActionsMixin
 
 from flask_ld.utils import slugify
 
 import rdfalchemy
-from flask.ext.admin.model import BaseModelView
+from flask_admin.model import BaseModelView
 
 from form import get_form, get_label
 

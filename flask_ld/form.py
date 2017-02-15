@@ -2,11 +2,11 @@ from rdflib import *
 
 from wtforms import fields, validators, widgets
 
-from flask.ext.admin import form
-from flask.ext.admin.model.form import FieldPlaceholder
-from flask.ext.admin.model.fields import InlineFieldList, AjaxSelectField, AjaxSelectMultipleField
-from flask.ext.admin.model.widgets import InlineFormWidget
-from flask.ext.admin._compat import iteritems
+from flask_admin import form
+from flask_admin.model.form import FieldPlaceholder
+from flask_admin.model.fields import InlineFieldList, AjaxSelectField, AjaxSelectMultipleField
+from flask_admin.model.widgets import InlineFormWidget
+from flask_admin._compat import iteritems
 
 import rdfalchemy
 import re
@@ -119,7 +119,7 @@ def get_form(model,
     """
     Create a wtforms Form for a given mongoengine Document schema::
 
-        from flask.ext.mongoengine.wtf import model_form
+        from flask_mongoengine.wtf import model_form
         from myproject.myapp.schemas import Article
         ArticleForm = model_form(Article)
 

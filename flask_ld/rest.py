@@ -1,7 +1,7 @@
 from rdflib import *
 from flask_ld.flaskld import LocalResource
 from flask import Flask, request, make_response, render_template, g, session, abort
-from flask.ext.restful import Resource, Api
+from flask_restful import Resource, Api
 import sadi
 
 class LinkedDataResourceList(Resource):

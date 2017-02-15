@@ -1,11 +1,11 @@
-from flask.ext.security.datastore import Datastore, UserDatastore
+from flask_security.datastore import Datastore, UserDatastore
 import rdfalchemy
 from rdfalchemy.descriptors import value2object
 from rdflib import *
 from flask import make_response
 import uuid
 from copy import copy
-from flask.ext import restful
+import flask_restful as restful
 from utils import lru
 import hashlib
 
