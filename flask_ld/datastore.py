@@ -23,7 +23,7 @@ auth = Namespace("http://vocab.rpi.edu/auth/")
 foaf = Namespace("http://xmlns.com/foaf/0.1/")
 
 def load_namespaces(g, l):
-    print g.namespace_manager
+    #print g.namespace_manager
     loc = {}
     loc.update(l)
     loc.update(locals())
@@ -41,7 +41,7 @@ class Serializer:
 
 def JsonldSerializer(graph, code, headers=None):
     context = dict([(x[0],str(x[1])) for x in graph.namespace_manager.namespaces()])
-    print context
+    #print context
     resp = make_response(graph.serialize(format='json-ld', context=context, indent=4).decode(),code)
     resp.headers.extend(headers or {})
     return resp    
@@ -112,7 +112,7 @@ class rdfMultiple(rdfalchemy.rdfMultiple):
         if self.name in obj.__dict__:
             return obj.__dict__[self.name]
         val = [o for o in db.objects(obj.resUri, self.pred)]
-        print obj.resUri, self.pred, val
+        #print obj.resUri, self.pred, val
         # check to see if this is a Container or Collection
         # if so, return collection as a list
         if (len(val) == 1
@@ -253,7 +253,7 @@ def tag_datastore(fn):
     def f(self,*args,**kw):
         result = fn(self,*args,**kw)
         if result:
-            print self, result
+            #print self, result
             result.datastore = self
         return result
     return f
@@ -266,12 +266,18 @@ class RDFAlchemyDatastore(Datastore):
         self.classes = classes
 
     def commit(self):
-        pass
-        #self.db.commit()
+        self.db.commit()
 
     @tag_datastore
     def put(self, model):
         #self.db.add(model)
+        if model.resUri == URIRef("#"):
+            #print model.db
+            g = model.local_api.create(model.db)
+            newURI = g.value(URIRef("#"),OWL.sameAs)
+            model = model.local_api.alchemy(newURI)
+        else:
+            model.local_api.update(model.db, model.resUri)
         return model
 
     def delete(self, model):
@@ -280,7 +286,7 @@ class RDFAlchemyDatastore(Datastore):
     @lru
     @tag_datastore
     def get(self,resUri):
-        print resUri, 'a', [x for x in self.db.objects(resUri,rdfalchemy.RDF.type)]
+        #print resUri, 'a', [x for x in self.db.objects(resUri,rdfalchemy.RDF.type)]
         for t in self.db.objects(resUri,rdfalchemy.RDF.type):
             if str(t) in self.classes:
                 result = self.classes[str(t)](resUri)
@@ -318,9 +324,9 @@ class RDFAlchemyUserDatastore(RDFAlchemyDatastore, UserDatastore):
 
     @tag_datastore
     def find_user(self, **kwargs):
-        print kwargs
+        #print kwargs
         if 'id' in kwargs:
-            return self.user_model(id=rdfalchemy.URIRef(kwargs['id']))
+            return self.user_model(uri=rdfalchemy.URIRef(kwargs['id']))
         try:
             return self.user_model.get_by(**kwargs)
         except:
@@ -328,7 +334,7 @@ class RDFAlchemyUserDatastore(RDFAlchemyDatastore, UserDatastore):
 
     @tag_datastore
     def find_role(self, role, **kwargs):
-        print kwargs
+        #print kwargs
         if 'id' in kwargs:
             return self.role_model(rdfalchemy.URIRef(kwargs['id']))
         try:

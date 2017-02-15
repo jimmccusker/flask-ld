@@ -44,7 +44,12 @@ class LinkedDataResource(Resource):
         return result, 201
 
     def post(self,*args,**kwargs):
-        return '', 404
+        uri = self._get_uri(*args,**kwargs)
+        inputGraph = Graph()
+        contentType = request.headers['Content-Type']
+        sadi.deserialize(inputGraph,request.data,contentType)
+        result = self.local_resource.update(inputGraph, uri)
+        return result, 201
 
 def serializer(mimetype):
     def wrapper(graph, code, headers=None):
@@ -52,12 +57,29 @@ def serializer(mimetype):
         print graph
         if graph is not None and hasattr(graph, "serialize"):
             data = graph.serialize(format=sadi.contentTypes[mimetype].outputFormat)
-        print data, code, len(graph), mimetype
+        #print data, code, len(graph), mimetype
         resp = make_response(data, code)
         resp.headers.extend(headers or {})
         print data
         return resp
     return wrapper
+
+def rendertemplate(data, code, headers=None):
+    headers = headers or {}
+    if isinstance(data,rdfalchemy.rdfSubject):
+        uri = data.resUri
+    else:
+        uri = data.identifier
+    if data.template:
+        data = render_template(data.template,uri=uri,g=g,graph=data,ns=ns)
+        headers['Content-Type'] = "text/html"
+    else:
+        data = data.serialize(format="turtle")
+        headers['Content-Type'] = "text/turtle"
+
+    resp = make_response(data, code)
+    resp.headers.extend(headers or {})
+    return resp
 
 class JsonLDSerializer(sadi.DefaultSerializer):
     context = None
@@ -66,6 +88,7 @@ class JsonLDSerializer(sadi.DefaultSerializer):
             self.bindPrefixes(graph)
             return graph.serialize(format=self.outputFormat,
                                    context= self.context,encoding='utf-8')
+
 
 
 sadi.contentTypes['application/json'] = JsonLDSerializer("json-ld")
@@ -80,6 +103,7 @@ class LinkedDataApi(Api):
         for mimetype in sadi.contentTypes.keys():
             if mimetype is not None:
                 self.representations[mimetype] = serializer(mimetype)
+        self.representations['text/html'] = rendertemplate
 
         self.lod_prefix = host_prefix + api_prefix
         self._decorators = decorators
