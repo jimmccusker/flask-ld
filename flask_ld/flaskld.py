@@ -40,7 +40,7 @@ describe %s where { hint:Query hint:describeMode "CBD". }'''
     try:
         outputGraph += g.query(query % uri.n3())
     except:
-        outputGraph += g.query("select {%s ?p ?o} where { %s ?p ?o}"% (uri.n3(),uri.n3()))
+        outputGraph += g.query("select ?s ?p ?o where { ?s ?p ?o}", initBindings={"s":uri})
 
 def _create_binding(value, datatype):
     if datatype == URIRef:
