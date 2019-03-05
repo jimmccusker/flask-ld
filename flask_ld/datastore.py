@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from flask_security.datastore import Datastore, UserDatastore
 import rdfalchemy
 from rdfalchemy.descriptors import value2object
@@ -6,7 +7,7 @@ from flask import make_response
 import uuid
 from copy import copy
 import flask_restful as restful
-from utils import lru
+from .utils import lru
 import hashlib
 
 def public(obj):

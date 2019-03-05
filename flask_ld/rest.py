@@ -1,3 +1,4 @@
+from __future__ import print_function
 from rdflib import *
 from flask_ld.flaskld import LocalResource
 from flask import Flask, request, make_response, render_template, g, session, abort
@@ -54,13 +55,13 @@ class LinkedDataResource(Resource):
 def serializer(mimetype):
     def wrapper(graph, code, headers=None):
         data = ''
-        print graph
+        print(graph)
         if graph is not None and hasattr(graph, "serialize"):
             data = graph.serialize(format=sadi.contentTypes[mimetype].outputFormat)
         #print data, code, len(graph), mimetype
         resp = make_response(data, code)
         resp.headers.extend(headers or {})
-        print data
+        print(data)
         return resp
     return wrapper
 

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from rdflib import *
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 import base64
@@ -13,7 +14,7 @@ from flask_ld.utils import slugify
 import rdfalchemy
 from flask_admin.model import BaseModelView
 
-from form import get_form, get_label
+from .form import get_form, get_label
 
 import sadi
 

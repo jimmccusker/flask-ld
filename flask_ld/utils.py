@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re, threading, traceback, datetime
 from rdflib import Literal
 
@@ -6,7 +7,7 @@ def timer(fn):
         start = datetime.datetime.now()
         result = fn(*args, **kw)
         end = datetime.datetime.now()
-        print fn.__name__, "(",args, kw,")", (end-start)
+        print(fn.__name__, "(",args, kw,")", (end-start))
         return result
     return wrapper
 
@@ -26,7 +27,7 @@ def get_max_id(c, graph):
 
 def print_stacktrace():
     for line in traceback.format_stack()[:-1]:
-        print line.strip()
+        print(line.strip())
 
 def lru(original_function, maxsize=1000):
     mapping = {}
