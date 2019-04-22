@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import str
 from rdflib import *
 from flask_ld.flaskld import LocalResource
 from flask import Flask, request, make_response, render_template, g, session, abort
@@ -11,7 +13,7 @@ class LinkedDataResourceList(Resource):
     def post(self):
         inputGraph = Graph()
         contentType = request.headers['Content-Type']
-        sadi.deserialize(inputGraph,unicode(request.data),contentType)
+        sadi.deserialize(inputGraph,str(request.data),contentType)
         outputGraph = self.local_resource.create(inputGraph)
         return outputGraph, 201
 
@@ -54,13 +56,13 @@ class LinkedDataResource(Resource):
 def serializer(mimetype):
     def wrapper(graph, code, headers=None):
         data = ''
-        print graph
+        print(graph)
         if graph is not None and hasattr(graph, "serialize"):
             data = graph.serialize(format=sadi.contentTypes[mimetype].outputFormat)
         #print data, code, len(graph), mimetype
         resp = make_response(data, code)
         resp.headers.extend(headers or {})
-        print data
+        print(data)
         return resp
     return wrapper
 
@@ -100,7 +102,7 @@ class LinkedDataApi(Api):
     def __init__(self, app, api_prefix, store, host_prefix, decorators=[]):
         Api.__init__(self, app, prefix=api_prefix)
         self.store = store
-        for mimetype in sadi.contentTypes.keys():
+        for mimetype in list(sadi.contentTypes.keys()):
             if mimetype is not None:
                 self.representations[mimetype] = serializer(mimetype)
         self.representations['text/html'] = rendertemplate

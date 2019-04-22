@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from builtins import str
+from builtins import object
 from flask_security.datastore import Datastore, UserDatastore
 import rdfalchemy
 from rdfalchemy.descriptors import value2object
@@ -6,7 +9,7 @@ from flask import make_response
 import uuid
 from copy import copy
 import flask_restful as restful
-from utils import lru
+from .utils import lru
 import hashlib
 
 def public(obj):
@@ -31,7 +34,7 @@ def load_namespaces(g, l):
         if isinstance(loc[local],Namespace):
             g.bind(local, loc[local])
 
-class Serializer:
+class Serializer(object):
     def __init__(self,format):
         self.format = format
     def __call__(self, graph, code, headers=None):

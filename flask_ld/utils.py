@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import str
+from builtins import object
 import re, threading, traceback, datetime
 from rdflib import Literal
 
@@ -6,7 +9,7 @@ def timer(fn):
         start = datetime.datetime.now()
         result = fn(*args, **kw)
         end = datetime.datetime.now()
-        print fn.__name__, "(",args, kw,")", (end-start)
+        print(fn.__name__, "(",args, kw,")", (end-start))
         return result
     return wrapper
 
@@ -26,7 +29,7 @@ def get_max_id(c, graph):
 
 def print_stacktrace():
     for line in traceback.format_stack()[:-1]:
-        print line.strip()
+        print(line.strip())
 
 def lru(original_function, maxsize=1000):
     mapping = {}
@@ -74,14 +77,14 @@ def slugify(value):
     From Django's "django/template/defaultfilters.py".
     """
     import unicodedata
-    if not isinstance(value, unicode):
-        value = unicode(value)
+    if not isinstance(value, str):
+        value = str(value)
     value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore')
-    value = unicode(_slugify_strip_re.sub('', value).strip().lower())
+    value = str(_slugify_strip_re.sub('', value).strip().lower())
     return _slugify_hyphenate_re.sub('-', value)
 
 # TODO: There's a risk of the exlusive lock being starved during lots of reads.
-class ShLock:
+class ShLock(object):
     xlock = threading.RLock()
     shlock = threading.Condition()
     lock_count = 0

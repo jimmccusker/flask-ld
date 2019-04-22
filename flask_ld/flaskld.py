@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from builtins import bytes
+from builtins import str
+from builtins import object
 from rdflib import *
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 import base64
@@ -13,7 +17,7 @@ from flask_ld.utils import slugify
 import rdfalchemy
 from flask_admin.model import BaseModelView
 
-from form import get_form, get_label
+from .form import get_form, get_label
 
 import sadi
 
@@ -67,7 +71,7 @@ def sparql_select(fn):
     def wrapper(*args, **kwargs):
         db, query, parameters = fn(*args, **kwargs)
         bindings = dict([(name, _create_binding(request.args[name],datatype)) 
-                    for name, datatype in parameters.items() 
+                    for name, datatype in list(parameters.items()) 
                     if name in request.args])
         if 'limit' in request.args:
             query += '\nLIMIT %s' % int(request.args['limit'])
@@ -97,7 +101,7 @@ def rebase(graph, inputUri, uri):
     for t in graph:
         yield tuple([replace(x) for x in t])
 
-class LocalResource:
+class LocalResource(object):
     def __init__(self, cl, prefix, store, vocab, lod_prefix, mixin=object, name=None):
         self.inputClass = cl
         self.store = store
@@ -239,7 +243,7 @@ class LocalResource:
 
 _mapper_classes = {}
 
-class rdfAbstract:
+class rdfAbstract(object):
     @property
     def range_class(self):
         """
@@ -314,7 +318,7 @@ def create_model(local_api, mixin=object):
             if len(kwargs) != 1:
                 raise ValueError("get_by wanted exactly 1 but got  %i args\n" +
                                  "Maybe you wanted filter_by" % (len(kwargs)))
-            key, value = kwargs.items()[0]
+            key, value = list(kwargs.items())[0]
             if isinstance(value, (URIRef, BNode, Literal)):
                 o = value
             else:
@@ -478,11 +482,11 @@ class ModelView(BaseModelView):
         return get_form(self.local_api.alchemy)
 
     def scaffold_list_columns(self):
-        columns = self.local_api.alchemy._sortable_columns.keys()
+        columns = list(self.local_api.alchemy._sortable_columns.keys())
         return columns
 
     def scaffold_sortable_columns(self):
-        return self.local_api.alchemy._sortable_columns.keys() 
+        return list(self.local_api.alchemy._sortable_columns.keys()) 
 
     def _get_default_order(self):
         return self._default_sort

@@ -1,3 +1,4 @@
+from builtins import str
 from rdflib import *
 
 from wtforms import fields, validators, widgets
@@ -146,7 +147,7 @@ def get_form(model,
     field_args = field_args or {}
 
     # Find properties
-    properties = model._sortable_columns.items()
+    properties = list(model._sortable_columns.items())
 
     if only:
         props = dict(properties)
